@@ -1,6 +1,14 @@
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Any, List
+
+CENTS = Decimal("0.01")
+
+
+def to_cents(amount: Any) -> Decimal:
+    """Round a monetary amount to cents once, half-up, using exact decimal arithmetic."""
+    return Decimal(str(amount)).quantize(CENTS, rounding=ROUND_HALF_UP)
+
 
 async def calculate_monthly_revenue(property_id: str, month: int, year: int, db_session=None) -> Decimal:
     """
@@ -64,7 +72,8 @@ async def calculate_total_revenue(property_id: str, tenant_id: str) -> Dict[str,
         row = result.fetchone()
 
     if row:
-        total_revenue = Decimal(str(row.total_revenue))
+        # SUM over NUMERIC(10,3) is exact; round to cents once, here.
+        total_revenue = to_cents(row.total_revenue)
         return {
             "property_id": property_id,
             "tenant_id": tenant_id,

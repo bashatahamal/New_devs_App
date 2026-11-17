@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Dict, Any
 from app.services.cache import get_revenue_summary
+from app.services.reservations import to_cents
 from app.core.auth import authenticate_request as get_current_user
 
 router = APIRouter()
@@ -18,11 +19,13 @@ async def get_dashboard_summary(
 
     revenue_data = await get_revenue_summary(property_id, tenant_id)
     
-    total_revenue_float = float(revenue_data['total'])
-    
+    # Keep money in Decimal and round to cents before it becomes a JSON number,
+    # so clients never have to round binary floats (e.g. 4975.525 -> 4975.52).
+    total_revenue = to_cents(revenue_data['total'])
+
     return {
         "property_id": revenue_data['property_id'],
-        "total_revenue": total_revenue_float,
+        "total_revenue": float(total_revenue),
         "currency": revenue_data['currency'],
         "reservations_count": revenue_data['count']
     }
